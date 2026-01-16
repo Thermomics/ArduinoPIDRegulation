@@ -4,6 +4,8 @@
 #include "lib_I2CLCD.h"
 #include <math.h>
 
+// TODO implementer un mode ON/OFF sans pid avec si erreur supérieur à 0.5°C au chaffe ou refroidit
+
 // TODO rajouter un diode verte si consigne automatique
 // fait
 // TODO rajouter le changement de température après 1 minute
@@ -34,6 +36,22 @@ struct {
   {CHANGE_INTERVAL*2, 25.0}, // 5 sec à 22°C
 
 };
+
+
+// filtrage de la consigne
+float alpha = 0.2; // Coefficient de lissage (0 < alpha < 1)
+float Output_Pid_filtered = 0;
+
+float tau = 0.2; // Constante de temps (ajustable)
+float T1 = 20;
+
+// Filtrage par moyenne glissante
+//const int numReadings = 10; // Nombre de valeurs pour la moyenne glissante
+//float readings[numReadings]; // Tableau pour stocker les valeurs
+//int readIndex = 0; // Index de la lecture actuelle
+//float total = 0; // Total des valeurs
+
+
 
 const int NUM_FORCED_SETPOINTS = sizeof(forcedSetpoints) / sizeof(forcedSetpoints[0]);
 int currentSetpointIndex = 0; // Index de la consigne actuelle
@@ -288,6 +306,8 @@ void setup() {
     Serial.println("°C");
   }
 
+  
+
   pinMode(RPWM, OUTPUT);
   pinMode(LPWM, OUTPUT);
   pinMode(R_EN, OUTPUT);
@@ -307,7 +327,7 @@ void setup() {
   Wire.begin();
   initLCD();
   clearDisplayLCD();
-  printDisplayLCD("Code PID 23/12 16h41");
+  printDisplayLCD("15h37 16-janvier");
   delay(800);
   clearDisplayLCD();
  
@@ -453,6 +473,11 @@ void loop() {
     }
     
   }
+
+  //// Déplacer les valeurs dans le tableau
+  //for (int i = numReadings - 1; i > 0; i--) {
+  //  readings[i] = readings[i - 1];
+  //}
   
   // Lecture températures
   analogRead(NTC1_PIN);
@@ -463,7 +488,14 @@ void loop() {
   delayMicroseconds(200);
   int raw2 = analogRead(NTC2_PIN);
 
-  float T1 = tempC_fromRaw(raw1);
+
+  
+  float T1_rawValue = tempC_fromRaw(raw1);  
+  T1 = tau * T1_rawValue + (1 - tau) * T1; // Filtre passe-bas
+  Serial.print(" T1_rawValue: ");
+  Serial.print( T1_rawValue);
+  Serial.print(" T1 filtré: ");
+  Serial.println( T1);
   float T2 = tempC_fromRaw(raw2);
  
 
@@ -472,7 +504,7 @@ void loop() {
 
   // Prépare PID
   Input_Pid = T1;
-  Setpoint = Tc;
+  Setpoint = (round(Tc*10))/10;
   
 
   // Sécurités et régulation
@@ -487,10 +519,10 @@ void loop() {
     // Limitation douce proche consigne (pour éviter d'arriver trop vite)
     double err = Tc - T1;
 
-    if (Output_Pid < 0) { Output_Pid = 1.25 * Output_Pid; }
+    //if (Output_Pid < 0) { Output_Pid = 1.25 * Output_Pid; }
 
     if (Output_Pid > 200) { Output_Pid = 200; }
-    if (Output_Pid < -200) { Output_Pid = -200; }
+    if (Output_Pid < -240) { Output_Pid = -240; }
 
     // Deadband : on coupe si très proche de la consigne
     //if (fabs(err) < 0.2) {
@@ -505,6 +537,8 @@ void loop() {
     //  }
     //
     //}
+    // avec un filtre exponentiel
+    //Output_Pid_filtered = alpha * Output_Pid + (1 - alpha) * Output_Pid_filtered; // Filtre exponentiel
 
     heaterOn(Output_Pid);
   }

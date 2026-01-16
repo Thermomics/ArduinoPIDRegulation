@@ -10,3 +10,4 @@ sinusoidalProgress = 0.5 * (1.0 - np.cos(X/TEMP_RAMP_INTERVAL*np.pi))
 sinusoidalProgress = 0.5 * (1.0 - np.cos(X/TEMP_RAMP_INTERVAL*np.pi))
 plt.plot(X,sinusoidalProgress)
 # %%
+
