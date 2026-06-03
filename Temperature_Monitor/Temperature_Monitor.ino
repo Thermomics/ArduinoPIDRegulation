@@ -190,14 +190,14 @@ double Input_Pid, Output_Pid, Setpoint;
 // Réglage “un peu plus rapide” (point de départ)
 // Si overshoot: baisse Kp ou Ki.
 // Si trop lent: monte un peu Kp.
-double Kp = 80.0;
-double Ki = 0.0;
+double Kp = 10.0;
+double Ki = 1.0;
 double Kd = 0.0;
 
 PID pid(&Input_Pid, &Output_Pid, &Setpoint, Kp, Ki, Kd, DIRECT);
 
 // Limites PWM (protège ton montage)
-const int PWM_MAX = 200;
+const int PWM_MAX = 100;
 
 // Zone douce proche consigne (évite coups près du point)
 const double SOFT_ZONE_C = 1.0;  // en dessous de Tc, on limite
@@ -327,7 +327,7 @@ void setup() {
   Wire.begin();
   initLCD();
   clearDisplayLCD();
-  printDisplayLCD("15h37 16-janvier");
+  printDisplayLCD("16h09 2-juin");
   delay(800);
   clearDisplayLCD();
  
@@ -491,7 +491,8 @@ void loop() {
 
   
   float T1_rawValue = tempC_fromRaw(raw1);  
-  T1 = tau * T1_rawValue + (1 - tau) * T1; // Filtre passe-bas
+  //T1 = tau * T1_rawValue + (1 - tau) * T1; // Filtre passe-bas
+  T1= T1_rawValue;
   Serial.print(" T1_rawValue: ");
   Serial.print( T1_rawValue);
   Serial.print(" T1 filtré: ");
